@@ -2,19 +2,28 @@
 
 ## 1. Executive Summary & Project Vision
 
-**ShiftSynth** is a collaborative web platform built upon the **MVC (Model–View–Controller)** architectural pattern where freelancers can create and accept gigs, form flat peer-to-peer freelancer organizations to jointly provide and sell services, and rely on an intelligent, automated calendar that populates schedule blocks and prevents booking conflicts the moment a gig is accepted.
+**ShiftSynth** is a comprehensive web platform built upon the **MVC (Model–View–Controller)** architectural pattern for freelancers to manage their gigs, deadlines, task execution, client communication, and financial transactions in one unified workspace.
 
-### Core Pillars
-1. **MVC (Model–View–Controller) Foundation with DTO & DAO Security**:
-   - **View (`Frontend/`)**: Angular (TypeScript) Single-Page Application responsible for presentation views, interactive calendars, and user interaction.
-   - **Controller (`Backend/src/controllers/` & `routes/`)**: Node.js + Express.js request handlers that govern routing, authentication, and **DTO (Data Transfer Object)** validation/serialization between the View and the Model.
-   - **Model (`Backend/src/services/`, `daos/`, & `PostgreSQL`)**: Domain business rules, **DAOs (Data Access Objects)**, Prisma ORM, and the relational PostgreSQL database managing state, transactions, and data integrity.
-2. **Gig Marketplace & Service Offerings**: Freelancers (individually or as an organization) can publish services/gigs, review incoming gig requests, and accept work.
-3. **Flat Freelancer Organizations (Collectives)**: Groups of freelancers can join forces under a shared organization banner to build and sell services together. Inside an organization, **all members are equals**—every member can review and accept gigs on behalf of the organization without bureaucratic role hierarchies.
-4. **Site-Level Authorization Only**: There are only two platform-level roles:
-   - `USER`: Standard registered users/freelancers who create profiles, join/create organizations, and publish, review, or accept gigs.
-   - `ADMIN`: System administrators / developers with platform moderation, user management, and system oversight permissions.
-5. **Automated Conflict-Safe Calendar**: Accepting a gig automatically triggers an atomic Model transaction that verifies schedule availability (conflict detection) and populates the freelancer's (and/or organization members') calendar in the View.
+### Mandatory Core Pillars (Primary Scope)
+1. **Identity, Authentication & Account Semantics**:
+   - Full account lifecycle including **Site Registration**, **Email Confirmation** (verification link sent via email), **Login** (JWT Access & Refresh tokens), **Authenticated Password Change**, and **Forgot / Reset Password** (via tokenized email link).
+   - **Site-Level Authorization Only**:
+     - `USER`: Standard registered freelancers who manage gigs, unified calendars, per-gig Kanban boards, client contacts, payments, and email invoices.
+     - `ADMIN`: System administrators / developers with platform oversight, user moderation, and system diagnostic permissions.
+2. **Unified Deadline Calendar + Per-Gig Kanban Boards**:
+   - **Unified Deadline Calendar**: A single master calendar that displays **all** accepted gigs and deadlines across the freelancer's entire workload. Accepting a gig automatically triggers conflict detection and populates the deadline block onto the unified calendar.
+   - **Dedicated Per-Gig Kanban Board (`1 Gig : 1 Kanban Board`)**: While the calendar is unified, **each accepted gig automatically receives its own separate Kanban board** (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`) to aid the freelancer in dividing and tracking tasks specific to that gig.
+3. **Client Contacts & Communication Hub (Contacts Page)**:
+   - A dedicated Contacts page where freelancers maintain a directory of their clients (contact details, company info, notes) and communicate directly with them through logged messages and email dispatch linked to their gigs.
+4. **Payment & Banking Transaction System**:
+   - Processes and records structured banking/payment transaction data (`amount`, `currency`, `bank_ref_code`, `masked_iban_acct`, `status`, timestamps) tied to a specific gig and client contact.
+   - Supports **Payments to the Freelancer** as a core mandatory feature, with **Client Refunds** architecturally supported in the data model as a **Planned Feature**.
+5. **Automated Email Invoicing / Receipt System**:
+   - Whenever a payment transaction (or planned refund) is recorded, the platform automatically generates a structured invoice/receipt containing the banking-transaction details and emails it directly to the freelancer's client.
+6. **MVC Architecture Hardened with DTOs & DAOs**:
+   - **View (`Frontend/`)**: Angular (TypeScript) SPA rendering the UI, Unified Calendar, Per-Gig Kanban boards, Contacts hub, and Payment/Invoice views.
+   - **Controller (`Backend/src/controllers/` & `dtos/`)**: Express.js route handlers protected by **Inbound & Outbound DTOs (Data Transfer Objects)** to prevent mass assignment and sensitive field exposure.
+   - **Model (`Backend/src/services/`, `daos/`, & `PostgreSQL`)**: Domain business rules and **DAOs (Data Access Objects)** encapsulating Prisma ORM transactions and PostgreSQL persistence.
 
 ---
 
@@ -22,12 +31,13 @@
 
 | MVC Role | Layer | Technology | Language | Role & Rationale |
 | :--- | :--- | :--- | :--- | :--- |
-| **VIEW (`V`)** | **Frontend SPA** | **Angular** (Standalone Components) | TypeScript | Renders the user interface, binds user actions to typed Request DTOs, and reactively updates views from Controller Response DTOs using Angular Signals & RxJS. |
-| **VIEW (`V`)** | **UI & Calendar** | **Angular Material / TailwindCSS** + **FullCalendar / `angular-calendar`** | TypeScript / SCSS | Accessible UI primitives and rich interactive day/week/month time-grid views for the automated schedule. |
-| **CONTROLLER (`C`)** | **Backend API & Routing** | **Node.js + Express.js** | JavaScript (ES6+ Modules) | Receives HTTP requests from the Angular View, enforces site-level role guards (`USER` vs `ADMIN`), validates Inbound DTOs, invokes Model logic, and returns sanitized Outbound DTOs. |
-| **MODEL (`M`)** | **Domain Services & DAOs** | **Express Services + DAO Layer + Prisma Client** | JavaScript + Prisma DSL | Encapsulates core business rules (flat organization peer permissions, calendar conflict detection) and isolates all database queries inside Data Access Objects (`DAOs`). |
-| **MODEL (`M`)** | **Relational Database** | **PostgreSQL + Prisma Migrate** | SQL + `JSONB` | ACID-compliant relational persistence for users, organizations, gigs, reviews, and indexed time-range calendar conflict queries, managed via versioned SQL migrations. |
-| **CROSS-CUTTING** | **Security & DTO Validation** | **JWT (Access + Refresh)**, **bcrypt**, **Zod / Joi**, **Helmet**, **CORS** | JavaScript | Secures the Controller boundary against mass assignment, unauthorized access, and sensitive Model data exposure. |
+| **VIEW (`V`)** | **Frontend SPA** | **Angular** (Standalone Architecture) | TypeScript | Enterprise-grade SPA framework with strict TypeScript DTO contracts, Angular Signals, and RxJS for reactive state across calendar, Kanban, contacts, and payment views. |
+| **VIEW (`V`)** | **Calendar & Kanban UI** | **FullCalendar / `angular-calendar`** + **Angular CDK Drag-and-Drop (`@angular/cdk/drag-drop`)** | TypeScript / SCSS | Powers the **Unified Deadline Calendar** (Month/Week/Day views) and interactive drag-and-drop **Per-Gig Kanban Boards**. |
+| **CONTROLLER (`C`)** | **Backend API & Routing** | **Node.js + Express.js** | JavaScript (ES6+ Modules) | Handles RESTful HTTP requests from the Angular View, enforces site-level role guards (`USER` vs `ADMIN`), validates Inbound DTOs, and serializes Outbound DTOs. |
+| **MODEL (`M`)** | **Domain Services & DAOs** | **Express Services + DAO Layer + Prisma Client** | JavaScript + Prisma DSL | Encapsulates business rules (conflict detection, per-gig Kanban provisioning, payment recording, invoice generation) and isolates all SQL queries inside `DAOs`. |
+| **MODEL (`M`)** | **Relational Database** | **PostgreSQL + Prisma Migrate** | SQL + `JSONB` | ACID-compliant relational database ensuring atomic transactions across gigs, calendar events, Kanban boards, banking transactions, and invoices. |
+| **INFRA / EMAIL** | **Transactional Email Engine** | **Nodemailer (SMTP / SendGrid / Mailtrap)** | JavaScript + HTML Templates | Dispatches **Automated Client Email Invoices/Receipts**, **Account Email Confirmation links**, **Forgot Password Reset links**, and **Client Contact messages**. |
+| **SECURITY** | **Auth & DTO Validation** | **JWT**, **bcrypt**, **crypto**, **Zod / Joi**, **Helmet**, **CORS** | JavaScript | Secures password hashing, email verification/reset tokens, HTTP headers, and strict DTO payload whitelisting. |
 
 ---
 
@@ -35,27 +45,29 @@
 
 ### 3.1 Full-Stack MVC System Architecture (View $\leftrightarrow$ Controller $\leftrightarrow$ Model)
 
-The visual diagram below illustrates the complete **MVC** architecture across `Frontend/` (the **View**) and `Backend/` + `PostgreSQL` (the **Controller** and **Model**), showing how **DTOs** protect the View–Controller boundary and **DAOs** protect the Controller–Model persistence boundary.
+The visual diagram below illustrates the complete **MVC** architecture across `Frontend/` (**View**), `Backend/` (**Controller** & **Model**), **PostgreSQL**, and the **Transactional Email Gateway**:
 
 ```text
 +=========================================================================================+
 |                   [ V ] VIEW LAYER — FRONTEND WORKSPACE (Angular + TS)                  |
 |                                                                                         |
-|  +-----------------------+     +-----------------------+     +-----------------------+  |
-|  |  Presentation Views   |     |   Route Guards &      |     |   Reactive View State |  |
-|  |  - Gig Marketplace    |<--->|   Interceptors        |<--->|   (Signals & RxJS)    |  |
-|  |  - Organization Hub   |     |   - AuthGuard         |     +-----------+-----------+  |
-|  |  - Auto-Calendar View |     |   - AdminGuard        |                 |              |
-|  |  - Site Admin Panel   |     |   - JwtInterceptor    |                 v              |
-|  +-----------------------+     +-----------------------+     +-----------------------+  |
-|                                                              |  Angular HttpClient   |  |
-|                                                              |  + Typed DTO Models   |  |
-|                                                              +-----------+-----------+  |
-+==========================================================================|==============+
-                                                                           |
-                                    HTTPS JSON                             |
-                   (View <-> Controller via Request/Response DTOs)         |
-                                                                           v
+|  +---------------------------------------------------+   +---------------------------+  |
+|  | Presentation Views (`src/app/features/`)          |   | Core Guards & State       |  |
+|  | - Auth Views (Register, Verify, Login, Reset Pwd) |   | - AuthGuard & AdminGuard  |  |
+|  | - Gig Marketplace & Gig Workspace                 |<->| - JwtInterceptor          |  |
+|  | - Unified Deadline Calendar (All Gigs)            |   | - Signals & RxJS Services |  |
+|  | - Per-Gig Kanban Board (CDK Drag & Drop Tasks)    |   +-------------+-------------+  |
+|  | - Client Contacts & Communication Hub             |                 |                |
+|  | - Payments & Email Invoice History                |                 v                |
+|  | - Site Administrator Panel (`ADMIN` only)         |   +---------------------------+  |
+|  +---------------------------------------------------+   | Angular HttpClient        |  |
+|                                                          | + Typed Request/Resp DTOs |  |
+|                                                          +-------------+-------------+  |
++========================================================================|================+
+                                                                         |
+                                  HTTPS JSON                             |
+                 (View <-> Controller via Request/Response DTOs)         |
+                                                                         v
 +=========================================================================================+
 |          [ C ] CONTROLLER LAYER — BACKEND ENTRYPOINT (Node.js + Express.js)             |
 |                                                                                         |
@@ -69,14 +81,15 @@ The visual diagram below illustrates the complete **MVC** architecture across `F
 |  +-------------------------------------------+   +-----------------------------------+  |
 |  | 2A. INBOUND DTO VALIDATION LAYER          |   | 2B. OUTBOUND DTO SANITIZER LAYER  |  |
 |  |     - Whitelists allowed request fields   |   |     - Formats Model data for View |  |
-|  |     - Blocks Mass Assignment attacks      |   |     - Strips passwordHash & keys  |  |
+|  |     - Blocks Mass Assignment attacks      |   |     - Strips passwordHash, token  |  |
+|  |     - Validates Banking & Contact inputs  |   |       hashes & raw bank secrets   |  |
 |  +-------------------------------------------+   +-----------------------------------+  |
 |                        |                                                 ^              |
 |                        v (Validated Request DTO)                         | (Model Data) |
 |  +-----------------------------------------------------------------------------------+  |
 |  | 3. EXPRESS ROUTE CONTROLLERS (`src/controllers/` & `src/routes/`)                 |  |
-|  |    [ AuthCtrl ]  [ UserCtrl ]  [ OrganizationCtrl ]  [ GigCtrl ]  [ CalendarCtrl ]|  |
-|  |    - Translates HTTP actions into Model operations & maps results to Outbound DTOs|  |
+|  |    [ AuthCtrl ] [ GigCtrl ] [ CalendarCtrl ] [ KanbanCtrl ] [ ContactCtrl ]       |  |
+|  |    [ PaymentCtrl ] [ InvoiceCtrl ] [ AdminCtrl ]                                  |  |
 |  +-----------------------------------------------------------------------------------+  |
 +===========================================|=============================================+
                                             |
@@ -84,21 +97,23 @@ The visual diagram below illustrates the complete **MVC** architecture across `F
                                             |
                                             v
 +=========================================================================================+
-|          [ M ] MODEL LAYER — DOMAIN SERVICES, DAOs & POSTGRESQL DATABASE                |
+|          [ M ] MODEL LAYER — DOMAIN SERVICES, DAOs, EMAIL ENGINE & POSTGRESQL           |
 |                                                                                         |
-|  +-----------------------------------------------------------------------------------+  |
-|  | 1. MODEL DOMAIN SERVICES (`src/services/`)                                        |  |
-|  |    - Enforces Flat Organization Peer Rules (any member can accept/review gigs)    |  |
-|  |    - Orchestrates Atomic Gig Acceptance & Calendar Conflict Detection             |  |
-|  +-----------------------------------------------------------------------------------+  |
-|                                            |                                            |
-|                                            v (Encapsulated Persistence Calls)           |
+|  +--------------------------------------------------------+  +-----------------------+  |
+|  | 1. MODEL DOMAIN SERVICES (`src/services/`)             |  | EMAIL / SMTP GATEWAY  |  |
+|  |    - AuthService (Verify Email, Forgot/Change Password)|  | (`mailer.util.js`)    |  |
+|  |    - GigService (Accept Gig -> Calendar + Kanban Init) |->| - Email Confirmation  |  |
+|  |    - CalendarService (Unified Deadlines & Conflict Ck) |  | - Password Reset Link |  |
+|  |    - KanbanService (Per-Gig Board & Task Division)     |  | - Client Banking      |  |
+|  |    - ContactService (Client Directory & Messaging)     |  |   Invoice Receipts    |  |
+|  |    - PaymentService & InvoiceService (Tx & Receipts)   |  | - Client Contact Mail |  |
+|  +---------------------------+----------------------------+  +-----------------------+  |
+|                              |                                                          |
+|                              v (Encapsulated Persistence Calls Only)                    |
 |  +-----------------------------------------------------------------------------------+  |
 |  | 2. MODEL DATA ACCESS OBJECTS (`src/daos/`)                                        |  |
-|  |    +-----------+   +-------------------+   +-----------+   +-------------------+  |  |
-|  |    |  UserDAO  |   |  OrganizationDAO  |   |  GigDAO   |   | CalendarEventDAO  |  |  |
-|  |    +-----+-----+   +---------+---------+   +-----+-----+   +---------+---------+  |  |
-|  |          +-------------------+-------------------+-------------------+            |  |
+|  |    [ UserDAO ] [ AuthTokenDAO ] [ GigDAO ] [ CalendarEventDAO ] [ KanbanDAO ]     |  |
+|  |    [ ClientContactDAO ] [ ContactMessageDAO ] [ TransactionDAO ] [ InvoiceDAO ]   |  |
 |  |                                        |                                          |  |
 |  |                                        v                                          |  |
 |  |                   [ Prisma Client Singleton & $transaction ]                      |  |
@@ -107,251 +122,321 @@ The visual diagram below illustrates the complete **MVC** architecture across `F
 |                                           v (TCP / Pooled SQL Connection)               |
 |  +-----------------------------------------------------------------------------------+  |
 |  | 3. POSTGRESQL RELATIONAL DATABASE (`prisma/`)                                     |  |
-|  |    +---------------------------------------+   +-------------------------------+  |  |
-|  |    | Relational Model Tables               |   | Prisma Migrate                |  |  |
-|  |    | - users              - gigs           |<--| - Versioned SQL Migrations    |  |  |
-|  |    | - organizations      - gig_reviews    |   | - ACID Transactions & Indexes |  |  |
-|  |    | - organization_members                |   +-------------------------------+  |  |
-|  |    | - calendar_events                     |                                      |  |
-|  |    +---------------------------------------+                                      |  |
+|  |    - Tables: users, auth_tokens, client_contacts, contact_messages, gigs,         |  |
+|  |              kanban_boards, kanban_tasks, calendar_events, transactions,          |  |
+|  |              email_invoices                                                       |  |
+|  |    - Managed via Versioned SQL Migrations (`prisma migrate`)                      |  |
 |  +-----------------------------------------------------------------------------------+  |
 +=========================================================================================+
 ```
 
 ---
 
-### 3.2 MVC Security Pipeline: How DTOs and DAOs Protect the Model & View
+### 3.2 MVC Security Pipeline: How DTOs and DAOs Protect Sensitive Auth & Banking Data
 
-To prevent direct coupling between the **View** (Angular client) and the **Model** (PostgreSQL entities) and protect against OWASP vulnerabilities (Mass Assignment, Sensitive Data Exposure, and Injection), every request and response flows through strict **DTO** and **DAO** gates:
+Because **ShiftSynth** handles authentication tokens, client contact details, and banking/payment transaction records, every request and response must pass through strict **DTO** and **DAO** security boundaries:
 
 ```text
   [ VIEW LAYER ]                  [ CONTROLLER LAYER ]                    [ MODEL LAYER ]
 +-----------------+     +------------------------------------+     +-------------------------+
 | Angular Client  |     | INBOUND DTO VALIDATOR              |     | DOMAIN SERVICE          |
-| Sends Request   |---->| - Validates types & required fields|---->| - Executes business     |
-| JSON Payload    |     | - Strips unauthorized properties   |     |   rules & peer org      |
-+-----------------+     |   (e.g. blocks `siteRole="ADMIN"`) |     |   membership checks     |
-                        +------------------------------------+     +------------+------------+
-                                                                                |
+| Sends Request   |---->| - Validates types & required fields|---->| - Enforces ownership    |
+| JSON Payload    |     | - Strips unauthorized properties   |     |   (Freelancer owns Gig, |
++-----------------+     |   (e.g. blocks `siteRole="ADMIN"`, |     |   Kanban, Contact & Tx) |
+                        |   `isEmailVerified=true`)          |     +------------+------------+
+                        +------------------------------------+                  |
                                                                                 v
 +-----------------+     +------------------------------------+     +-------------------------+
 | Angular Client  |     | OUTBOUND DTO MAPPER                |     | DATA ACCESS OBJECT (DAO)|
 | Receives Safe   |<----| - Selects only public View fields  |<----| - Encapsulates Prisma   |
-| Response JSON   |     | - Strips `passwordHash` & internal |     | - Runs parameterized    |
-+-----------------+     |   Model metadata before responding |     |   queries on PostgreSQL |
+| Response JSON   |     | - Masks sensitive banking numbers  |     | - Runs parameterized    |
++-----------------+     | - Strips `passwordHash` & tokens   |     |   queries on PostgreSQL |
                         +------------------------------------+     +-------------------------+
 ```
 
-1. **Inbound DTOs (`Backend/src/dtos/request/`) — View $\rightarrow$ Controller Gate**:
-   - Validate request bodies, query parameters, and route parameters before the Controller invokes the Model.
-   - Explicitly whitelist allowed fields (e.g., `CreateGigRequestDTO` only permits `title`, `description`, `compensation`, `startTime`, `endTime`, `publishingOrgId`).
-2. **Data Access Objects (`Backend/src/daos/`) — Model Persistence Gate**:
-   - Controllers **never** talk to Prisma or PostgreSQL directly; they call Domain Services, which delegate all persistence operations to dedicated **DAO** classes (`UserDAO`, `OrganizationDAO`, `GigDAO`, `CalendarEventDAO`).
-   - DAOs encapsulate transactional boundaries and keep database queries modular and maintainable.
-3. **Outbound DTOs (`Backend/src/dtos/response/`) — Controller $\rightarrow$ View Gate**:
-   - Raw Model entities returned from a DAO are **never** sent directly to the View.
-   - Every response is mapped through an Outbound DTO (e.g., `UserResponseDTO`), guaranteeing that `passwordHash` or internal flags can never leak to the frontend.
+---
+
+### 3.3 Core Workflow 1: Gig Acceptance $\rightarrow$ Unified Deadline Calendar + Per-Gig Kanban Provisioning
+
+When a freelancer accepts a gig in the **View**, the **Model** executes an atomic database transaction (`prisma.$transaction`) that verifies schedule availability, adds the gig's deadline block to the **Unified Calendar**, and automatically provisions a **dedicated Kanban Board** exclusively for that gig:
+
+```text
+   [ VIEW: Freelancer clicks "Accept Gig" ]
+                      |
+                      v
+   [ CONTROLLER: POST /api/v1/gigs/:gigId/accept (Inbound DTO Validated) ]
+                      |
+                      v
+   +-----------------------------------------------------------------------+
+   | MODEL (Atomic Transaction via GigDAO + CalendarEventDAO + KanbanDAO): |
+   | 1. Query `calendar_events` on the Unified Calendar for time overlap:  |
+   |      existing.start_time < gig.deadline_end_time                      |
+   |      AND existing.end_time > gig.start_time                           |
+   +------------------+----------------------------------------------------+
+                      |
+        +-------------+-------------+
+        |                           |
+  [ Conflict ]               [ Slot Free ]
+        |                           |
+        v                           v
+   +----------+       +----------------------------------------------------+
+   | ROLLBACK |       | 1. Update `gigs.status` -> 'ACCEPTED'              |
+   | Return   |       | 2. Insert `calendar_events` entry into the         |
+   | 409 DTO  |       |    UNIFIED DEADLINE CALENDAR (all gigs displayed)  |
+   +----------+       | 3. Auto-Create a separate `kanban_boards` record   |
+                      |    linked 1:1 to this `gig_id` (`TODO`, `IN_PROG`, |
+                      |    `REVIEW`, `DONE` task columns)                  |
+                      | 4. COMMIT TRANSACTION                              |
+                      +-----------------------+----------------------------+
+                                              |
+                                              v
+                      [ VIEW: Unified Calendar displays the new Gig        ]
+                      [       & Gig's Dedicated Kanban Board is unlocked   ]
+```
 
 ---
 
-### 3.3 Automated Calendar & Conflict Detection Flow (MVC Decision Flow)
+### 3.4 Core Workflow 2: Payment System & Automated Client Email Invoicing
 
-When a freelancer (individually or as an equal member of an organization) accepts a gig in the **View**, the **Controller** validates the request and triggers an atomic transaction in the **Model**:
+When a payment transaction for a gig is processed, the **Model** persists the banking transaction data, generates an official invoice receipt record, and dispatches an HTML email receipt directly to the freelancer's client:
 
 ```text
-   [ VIEW: Freelancer or Organization Member clicks "Accept Gig" ]
-                                  |
-                                  v
-   [ CONTROLLER: POST /api/v1/gigs/:gigId/accept (Validated via Inbound DTO) ]
-                                  |
-                                  v
-   +------------------------------------------------------------------+
-   | MODEL (Service + OrganizationDAO):                               |
-   | Accepting on behalf of an Organization?                          |
-   |  - YES --> Verify user exists in `organization_members`          |
-   |            (All organization members have equal peer authority)  |
-   |  - NO  --> Proceed as individual Freelancer                      |
-   +------------------------------+-----------------------------------+
-                                  |
-                                  v
-   +------------------------------------------------------------------+
-   | MODEL (GigDAO + CalendarEventDAO Atomic Transaction):            |
-   | Check `calendar_events` for any existing event where:            |
-   |   existing.start_time < new_gig.end_time                         |
-   |   AND existing.end_time > new_gig.start_time                     |
-   +------------------------------+-----------------------------------+
-                                  |
-                 +----------------+----------------+
-                 |                                 |
-       [ Overlap Found (> 0) ]           [ No Overlap (Slot Free) ]
-                 |                                 |
-                 v                                 v
-   +--------------------------+      +------------------------------------+
-   | MODEL:                   |      | MODEL:                             |
-   | - Rollback Transaction   |      | 1. Update `gigs.status`            |
-   | - Leave Gig & Calendar   |      |    -> 'ACCEPTED'                   |
-   |   tables unchanged       |      | 2. Auto-Insert `calendar_events`   |
-   +-------------+------------+      |    record (`GIG_BOOKING`)          |
-                 |                   | 3. Commit Transaction              |
-                 v                   +-----------------+------------------+
-   +--------------------------+                        |
-   | CONTROLLER:              |                        v
-   | - Format 409 Conflict    |      +------------------------------------+
-   |   Error Outbound DTO     |      | CONTROLLER:                        |
-   +-------------+------------+      | - Format 200 OK Outbound DTO       |
-                 |                   |   (Sanitized Gig + Calendar Event) |
-                 v                   +-----------------+------------------+
-   [ VIEW: Displays Schedule  ]                        |
-   [ Conflict Alert Modal     ]                        v
-                                     [ VIEW: Angular Calendar Automatically ]
-                                     [ Renders New Locked Gig Schedule Block]
+   [ VIEW: Freelancer records/processes Gig Payment in Payments View ]
+                                   |
+                                   v
+   [ CONTROLLER: POST /api/v1/payments (Validated via CreatePaymentRequestDTO) ]
+                                   |
+                                   v
+   +-----------------------------------------------------------------------+
+   | MODEL (PaymentService + TransactionDAO + InvoiceDAO Transaction):     |
+   | 1. Verify Gig ownership & fetch linked `client_contacts` record       |
+   | 2. Insert banking record into `transactions` table:                   |
+   |    - `transaction_type`: 'PAYMENT' (or Planned Feature: 'REFUND')     |
+   |    - `amount`, `currency`, `bank_ref_code`, `masked_iban_acct`        |
+   |    - `status`: 'COMPLETED'                                            |
+   | 3. Insert receipt record into `email_invoices` table:                 |
+   |    - Generates unique `invoice_number` (e.g. "INV-2026-00042")        |
+   |    - Stores immutable `receipt_snapshot` (JSONB banking & gig details)|
+   +-------------------------------+---------------------------------------+
+                                   |
+                                   v
+   +-----------------------------------------------------------------------+
+   | MODEL (EmailService / Nodemailer SMTP Gateway):                       |
+   | 1. Populate HTML Receipt Template with banking transaction info,      |
+   |    freelancer details, client details, gig title, and amount paid     |
+   | 2. Dispatch email to `client_contact.client_email`                    |
+   | 3. Update `email_invoices.delivery_status` -> 'SENT' (`sent_at`)      |
+   +-------------------------------+---------------------------------------+
+                                   |
+                                   v
+   [ CONTROLLER -> VIEW: Return 201 Created (Sanitized Transaction + Invoice DTO) ]
 ```
 
 ---
 
 ## 4. Relational Database Model & Entity-Relationship (ER) Diagram
 
-As part of the **Model (`M`)** layer, PostgreSQL stores six core relational tables managed via Prisma Migrate. Notice the key design rules reflected in the diagram below:
-- **Site-Level Roles Only**: `users.site_role` only distinguishes between `USER` (normal freelancer/user) and `ADMIN` (system administrator/developer).
-- **Flat Peer Organizations**: `organization_members` is a pure many-to-many join table between `users` and `organizations` **with no role column**—every member of an organization has equal rights to accept and review gigs.
-- **Automated Calendar Linkage**: `calendar_events` links directly to `users` (the scheduled freelancer) and optionally to `gigs` (`gig_id` populated automatically when a gig is accepted, or `NULL` when a freelancer adds a manual personal busy block).
+As part of the **Model (`M`)** layer, PostgreSQL stores ten core relational tables managed via Prisma Migrate:
+
+1. `users`: Registered freelancers and site administrators (`site_role`: `USER` or `ADMIN`, plus `is_email_verified`).
+2. `auth_tokens`: Stores hashed tokens for **Email Confirmation** (`VERIFY_EMAIL`), **Forgot Password** (`RESET_PASSWORD`), and **Session Refresh** (`REFRESH_TOKEN`).
+3. `client_contacts`: Powers the **Contacts Page**, storing each freelancer's client directory (name, email, phone, company, notes).
+4. `contact_messages`: Logs communication messages and emails sent between the freelancer and their clients on the Contacts page.
+5. `gigs`: Stores gig details, compensation, start/deadline timestamps, status, and links to the freelancer (`users`) and client (`client_contacts`).
+6. `calendar_events`: Powers the **Unified Deadline Calendar**—stores auto-generated gig schedule/deadline blocks across all accepted gigs (`GIG_BOOKING`) and manual busy blocks (`PERSONAL_BLOCK`).
+7. `kanban_boards`: Enforces a strict **1-to-1 (`1 : 1`) relationship with `gigs`** (`UNIQUE(gig_id)`), ensuring every gig has its own separate Kanban board.
+8. `kanban_tasks`: Stores individual task cards (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`) belonging to a specific gig's Kanban board.
+9. `transactions`: Powers the **Payment System**, storing banking transaction metadata (`PAYMENT` and future planned `REFUND`).
+10. `email_invoices`: Powers the **Email Invoicing System**, storing the generated invoice number, banking receipt snapshot (`JSONB`), recipient client email, and email delivery status (`PENDING`, `SENT`, `FAILED`).
 
 ### 4.1 Visual Entity-Relationship (ER) Diagram
 
 ```text
 +-----------------------------------+          +-----------------------------------+
-|               users               |          |           organizations           |
+|               users               |          |            auth_tokens            |
 +-----------------------------------+          +-----------------------------------+
-| PK  id             (UUID)         |          | PK  id             (UUID)         |
-|     email          (VARCHAR, UQ)  |          |     name           (VARCHAR, UQ)  |
-|     username       (VARCHAR, UQ)  |          |     slug           (VARCHAR, UQ)  |
-|     full_name      (VARCHAR)      |          |     description    (TEXT)         |
-|     password_hash  (VARCHAR)      |          |     service_tags   (TEXT[])       |
-|     bio            (TEXT)         |          |     metadata       (JSONB)        |
-|     skills         (TEXT[])       |          |     created_at     (TIMESTAMP)    |
-|     site_role      (USER | ADMIN) |          +-----------------+-----------------+
-|     is_active      (BOOLEAN)      |                            |
-|     created_at     (TIMESTAMP)    |                            | 1
-+---+-------------+-------------+---+                            |
-    | 1           | 1           | 1                              |
-    |             |             |              +-----------------+-----------------+
-    |             |             |              |       organization_members        |
-    |             |             |              |  (Flat Peer Collective Join Table)|
-    |             |             |              +-----------------------------------+
-    |             |             +------------->| PK  id              (UUID)        |
-    |             |                        N   | FK  user_id         (UUID)        |
-    |             |                            | FK  organization_id (UUID)        |<---+
-    |             |                            |     joined_at       (TIMESTAMP)   |    |
-    |             |                            |     *No intra-org role column*    |    |
-    |             |                            +-----------------------------------+    |
-    |             |                                                                     |
-    |             | 1 (Creator / Assignee)                       1 (Published / Accepted|
-    |             +----------------------------+                 by Organization)       |
-    |                                          |                 |                      |
-    | 1                                        v N               v N                    |
-+---+-------------------------------+          +-----------------------------------+    |
-|          calendar_events          |          |               gigs                |    |
-+-----------------------------------+          +-----------------------------------+    |
-| PK  id             (UUID)         |          | PK  id                  (UUID)    |    |
-| FK  user_id        (UUID)         |          | FK  creator_user_id     (UUID)    |    |
-| FK  gig_id         (UUID, NULL)   |<---------| FK  publishing_org_id   (UUID,NULL)----+
-|     title          (VARCHAR)      |  0..N  1 | FK  accepted_by_user_id (UUID,NULL)
-|     description    (TEXT)         |          | FK  accepted_by_org_id  (UUID,NULL)
-|     start_time     (TIMESTAMP)    |          |     title               (VARCHAR) |
-|     end_time       (TIMESTAMP)    |          |     description         (TEXT)    |
-|     event_type     (GIG_BOOKING | |          |     compensation        (DECIMAL) |
-|                     PERSONAL_BLK) |          |     start_time          (TIMESTAMP)
-+-----------------------------------+          |     end_time            (TIMESTAMP)
-                                               |     status              (ENUM)    |
-                                               |     requirements_meta   (JSONB)   |
-                                               +-----------------+-----------------+
-                                                                 | 1
-                                                                 |
-                                                                 v N
-                                               +-----------------------------------+
-                                               |            gig_reviews            |
-                                               +-----------------------------------+
-                                               | PK  id                  (UUID)    |
-                                               | FK  gig_id              (UUID)    |
-                                               | FK  reviewer_user_id    (UUID)    |
-                                               |     rating              (INT 1-5) |
-                                               |     comment             (TEXT)    |
-                                               |     created_at          (TIMESTAMP)
+| PK  id                (UUID)      | 1      N | PK  id                (UUID)      |
+|     email             (VARCHAR,UQ)|--------->| FK  user_id           (UUID)      |
+|     username          (VARCHAR,UQ)|          |     token_hash        (VARCHAR)   |
+|     full_name         (VARCHAR)   |          |     token_type        (VERIFY_MAIL|
+|     password_hash     (VARCHAR)   |          |                        RESET_PWD | |
+|     is_email_verified (BOOLEAN)   |          |                        REFRESH)   |
+|     site_role         (USER|ADMIN)|          |     expires_at        (TIMESTAMP) |
+|     created_at        (TIMESTAMP) |          |     used_at           (TIMESTAMP) |
++---+---------+---------+---------+----------+ +-----------------------------------+
+    | 1       | 1       | 1
+    |         |         +-----------------------------------------+
+    |         |                                                   | 1
+    |         | 1                                                 v N
+    |         |                                +-----------------------------------+
+    |         |                                |          client_contacts          |
+    |         |                                |     (Freelancer's Client Hub)     |
+    |         |                                +-----------------------------------+
+    |         |                                | PK  id                (UUID)      |
+    |         |                                | FK  freelancer_id     (UUID)      |
+    |         |                                |     client_name       (VARCHAR)   |
+    |         |                                |     client_email      (VARCHAR)   |
+    |         |                                |     client_phone      (VARCHAR)   |
+    |         |                                |     company_name      (VARCHAR)   |
+    |         |                                |     notes             (TEXT)      |
+    |         |                                +-----+-----------------------+-----+
+    |         |                                      | 1                     | 1
+    |         |                                      |                       |
+    |         | 1 (Freelancer)                       | 1 (Client)            |
+    |         +--------------------+                 |                       |
+    |                              |                 |                       |
+    | 1                            v N               v N                     v N
++---+-------------------+      +-----------------------------------+   +-----------------------------------+
+|    calendar_events    |      |               gigs                |   |         contact_messages          |
+|  (Unified Calendar)   |      +-----------------------------------+   |   (Client Communication Log)      |
++-----------------------+      | PK  id                (UUID)      |   +-----------------------------------+
+| PK  id        (UUID)  |      | FK  freelancer_id     (UUID)      |   | PK  id                (UUID)      |
+| FK  user_id   (UUID)  |      | FK  client_contact_id (UUID)      |   | FK  contact_id        (UUID)      |
+| FK  gig_id    (UUID)  |<-----|     title             (VARCHAR)   |   | FK  gig_id            (UUID, NULL)|
+|     title     (VARCHAR| 0..N |     description       (TEXT)      |   |     subject           (VARCHAR)   |
+|     start_time(TIME)  |      |     compensation      (DECIMAL)   |   |     message_body      (TEXT)      |
+|     end_time  (TIME)  |      |     start_time        (TIMESTAMP) |   |     sent_via_email    (BOOLEAN)   |
+|     event_type(ENUM)  |      |     deadline_end_time (TIMESTAMP) |   |     created_at        (TIMESTAMP) |
++-----------------------+      |     status            (ENUM)      |   +-----------------------------------+
+                               +-----+-----------------------+-----+
+                                     | 1                     | 1
+                                     | (1:1 Per-Gig Board)   | (1:N Gig Transactions)
+                                     v 1                     v N
++------------------------------------+--+      +-----------------------------------+
+|             kanban_boards             |      |           transactions            |
+|      (1 Separate Board Per Gig)       |      |    (Payment & Banking System)     |
++---------------------------------------+      +-----------------------------------+
+| PK  id                    (UUID)      |      | PK  id                (UUID)      |
+| FK  gig_id                (UUID, UQ)  |      | FK  gig_id            (UUID)      |
+|     board_title           (VARCHAR)   |      | FK  freelancer_id     (UUID)      |
+|     created_at            (TIMESTAMP) |      | FK  client_contact_id (UUID)      |
++-------------------+-------------------+      |     transaction_type  (PAYMENT |  |
+                    | 1                        |                        *REFUND*)  |
+                    |                          |     amount            (DECIMAL)   |
+                    v N                        |     currency          (VARCHAR)   |
++---------------------------------------+      |     bank_ref_code     (VARCHAR,UQ)|
+|             kanban_tasks              |      |     masked_iban_acct  (VARCHAR)   |
+|     (Task Division For That Gig)      |      |     status            (ENUM)      |
++---------------------------------------+      |     processed_at      (TIMESTAMP) |
+| PK  id                    (UUID)      |      +-----------------+-----------------+
+| FK  board_id              (UUID)      |                        | 1
+|     title                 (VARCHAR)   |                        | (1:1 Email Receipt)
+|     description           (TEXT)      |                        v 1
+|     column_status         (TODO |     |      +-----------------------------------+
+|                            IN_PROG |  |      |          email_invoices           |
+|                            REVIEW |   |      | (Automated Client Email Receipts) |
+|                            DONE)      |      +-----------------------------------+
+|     priority              (LOW|MED|HI)|      | PK  id                (UUID)      |
+|     position_order        (INT)       |      | FK  transaction_id    (UUID, UQ)  |
+|     due_date              (TIMESTAMP) |      | FK  client_contact_id (UUID)      |
++---------------------------------------+      |     invoice_number    (VARCHAR,UQ)|
+                                               |     recipient_email   (VARCHAR)   |
+                                               |     receipt_snapshot  (JSONB)     |
+                                               |     delivery_status   (SENT|FAIL) |
+                                               |     sent_at           (TIMESTAMP) |
                                                +-----------------------------------+
 ```
 
 ### 4.2 Relational Cardinality & Constraint Summary
 
-| Parent Entity (`1`) | Child Entity (`N`) | Relationship Type | Key Rule & Behavior |
+| Parent Entity (`1`) | Child Entity (`N` / `1`) | Relationship Type | Key Rule & Behavior |
 | :--- | :--- | :--- | :--- |
-| `users` | `organization_members` | One-to-Many (`1 : N`) | Links a freelancer to one or more organizations (`UNIQUE(organization_id, user_id)`). |
-| `organizations` | `organization_members` | One-to-Many (`1 : N`) | Resolves the `N : M` peer collective membership; deleting an org cascades to membership rows. |
-| `users` | `gigs` | One-to-Many (`1 : N`) | A user can create many gigs (`creator_user_id`) and accept many gigs (`accepted_by_user_id`). |
-| `organizations` | `gigs` | One-to-Many (`1 : N`) | An organization can publish services/gigs (`publishing_org_id`) or accept gigs (`accepted_by_org_id`) via any peer member. |
-| `gigs` | `calendar_events` | One-to-Many (`1 : 0..N`) | When a gig is accepted, one or more `GIG_BOOKING` calendar events are automatically created within the same transaction. |
-| `users` | `calendar_events` | One-to-Many (`1 : N`) | Indexed on `(user_id, start_time, end_time)` to guarantee instant overlap detection before confirming any gig booking. |
-| `gigs` / `users` | `gig_reviews` | One-to-Many (`1 : N`) | Allows freelancers and organization members to review and rate gigs (`1–5` scale). |
+| `users` | `auth_tokens` | One-to-Many (`1 : N`) | Manages expiring tokens for email confirmation, forgot-password resets, and refresh sessions. |
+| `users` | `client_contacts` | One-to-Many (`1 : N`) | Each freelancer maintains their own private directory of clients on the Contacts page. |
+| `client_contacts` | `contact_messages` | One-to-Many (`1 : N`) | Tracks all communication messages and outbound emails between the freelancer and a client. |
+| `users` & `client_contacts` | `gigs` | One-to-Many (`1 : N`) | Links each gig to the freelancer (`freelancer_id`) and the client (`client_contact_id`). |
+| `users` & `gigs` | `calendar_events` | One-to-Many (`1 : N`) | **Unified Deadline Calendar**: all accepted gigs populate into one unified calendar per user, indexed on `(user_id, start_time, end_time)` for conflict detection. |
+| `gigs` | `kanban_boards` | **One-to-One (`1 : 1`)** | **Per-Gig Kanban Board**: `gig_id` is `UNIQUE`, guaranteeing a separate Kanban board for each individual gig. |
+| `kanban_boards` | `kanban_tasks` | One-to-Many (`1 : N`) | Holds the task division cards (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`) for that specific gig's board. |
+| `gigs` & `client_contacts` | `transactions` | One-to-Many (`1 : N`) | Stores banking payment records (`PAYMENT` now; `REFUND` reserved as a Planned Feature). |
+| `transactions` | `email_invoices` | **One-to-One (`1 : 1`)** | Generates a unique banking receipt (`invoice_number` + `receipt_snapshot`) emailed automatically to the client. |
 
 ---
 
 ## 5. Workspace & Folder Structure (`Backend/` & `Frontend/`)
 
+The project structure below is organized around the **MVC** pattern with dedicated **DTO** and **DAO** layers for all mandatory modules:
+
 ```text
 ShiftSynth/
 ├── project_plan.md
 ├── README.md
-├── docker-compose.yml               # Local PostgreSQL container for development
+├── docker-compose.yml                       # Local PostgreSQL + Mailpit/Mailtrap SMTP container
 │
-├── Backend/                         # Node.js + Express.js (JavaScript)
+├── Backend/                                 # [C] CONTROLLER & [M] MODEL (Node.js + Express.js)
 │   ├── package.json
-│   ├── .env.example
+│   ├── .env.example                         # DB_URL, JWT_SECRET, SMTP_HOST, SMTP_USER, SMTP_PASS
 │   ├── prisma/
-│   │   ├── schema.prisma            # PostgreSQL schema
-│   │   ├── migrations/              # SQL migrations generated by Prisma Migrate
-│   │   └── seed.js                  # Initial ADMIN user & sample gigs/orgs
+│   │   ├── schema.prisma                    # PostgreSQL relational schema (10 core tables)
+│   │   ├── migrations/                      # Versioned SQL migrations via Prisma Migrate
+│   │   └── seed.js                          # Initial ADMIN user & sample data
 │   └── src/
-│       ├── server.js                # Express app bootstrap
+│       ├── server.js                        # Express application bootstrap
 │       ├── config/
-│       │   ├── db.config.js         # PrismaClient singleton instance
-│       │   └── env.config.js        # Validated environment variables
+│       │   ├── db.config.js                 # PrismaClient singleton instance
+│       │   ├── env.config.js                # Environment variable validation
+│       │   └── mail.config.js               # Nodemailer SMTP transport configuration
+│       ├── utils/
+│       │   ├── mailer.util.js               # Email dispatcher (Confirmation, Reset Pwd, Invoices, Contacts)
+│       │   └── email-templates/             # HTML templates for receipts & auth emails
+│       │       ├── confirm-email.template.js
+│       │       ├── reset-password.template.js
+│       │       ├── invoice-receipt.template.js
+│       │       └── client-message.template.js
 │       ├── middlewares/
-│       │   ├── auth.middleware.js   # JWT verification
-│       │   ├── role.middleware.js   # Site-level guard: requireRole('ADMIN' | 'USER')
-│       │   ├── validate-dto.middleware.js
-│       │   └── error.middleware.js  # Centralized error-to-DTO formatter
-│       ├── dtos/                    # Security Boundary: Inbound & Outbound DTOs
+│       │   ├── auth.middleware.js           # JWT verification & verified-email check
+│       │   ├── role.middleware.js           # Site-level guard: requireRole('ADMIN' | 'USER')
+│       │   ├── validate-dto.middleware.js   # Inbound DTO validator middleware
+│       │   └── error.middleware.js          # Centralized error-to-DTO formatter
+│       ├── dtos/                            # Security Boundary: Inbound & Outbound DTOs
 │       │   ├── request/
-│       │   │   ├── auth.request.dto.js
-│       │   │   ├── org.request.dto.js
-│       │   │   ├── gig.request.dto.js
-│       │   │   └── calendar.request.dto.js
+│       │   │   ├── auth.request.dto.js      # Register, Login, VerifyEmail, ForgotPwd, ResetPwd, ChangePwd
+│       │   │   ├── gig.request.dto.js       # Create, Update, Accept Gig DTOs
+│       │   │   ├── calendar.request.dto.js  # Personal block & date-range query DTOs
+│       │   │   ├── kanban.request.dto.js    # Create Task, Move Task Column/Order DTOs
+│       │   │   ├── contact.request.dto.js   # Create Client Contact, Send Client Message DTOs
+│       │   │   └── payment.request.dto.js   # Record Payment Transaction & Trigger Invoice DTOs
 │       │   └── response/
 │       │       ├── user.response.dto.js
-│       │       ├── org.response.dto.js
 │       │       ├── gig.response.dto.js
-│       │       └── calendar.response.dto.js
-│       ├── daos/                    # Data Access Objects (Only layer talking to Prisma)
+│       │       ├── calendar.response.dto.js
+│       │       ├── kanban.response.dto.js
+│       │       ├── contact.response.dto.js
+│       │       ├── payment.response.dto.js
+│       │       └── invoice.response.dto.js
+│       ├── daos/                            # [M] Data Access Objects (Only layer querying Prisma)
 │       │   ├── user.dao.js
-│       │   ├── organization.dao.js
+│       │   ├── auth-token.dao.js
 │       │   ├── gig.dao.js
-│       │   └── calendar-event.dao.js
-│       ├── services/                # Business Logic & Orchestration
-│       │   ├── auth.service.js
+│       │   ├── calendar-event.dao.js
+│       │   ├── kanban.dao.js
+│       │   ├── client-contact.dao.js
+│       │   ├── contact-message.dao.js
+│       │   ├── transaction.dao.js
+│       │   └── email-invoice.dao.js
+│       ├── services/                        # [M] Domain Business Logic & Orchestration
+│       │   ├── auth.service.js              # Registration, email confirmation, password lifecycle
 │       │   ├── user.service.js
-│       │   ├── organization.service.js
-│       │   ├── gig.service.js
-│       │   └── calendar.service.js
-│       ├── controllers/             # Express Route Handlers
+│       │   ├── gig.service.js               # Gig CRUD & atomic acceptance orchestration
+│       │   ├── calendar.service.js          # Unified calendar aggregation & conflict detection
+│       │   ├── kanban.service.js            # Per-gig Kanban board & task division management
+│       │   ├── contact.service.js           # Client directory & client email/message dispatch
+│       │   ├── payment.service.js           # Banking transaction processing
+│       │   └── invoice.service.js           # Automated receipt generation & client email delivery
+│       ├── controllers/                     # [C] Express Route Controllers
 │       │   ├── auth.controller.js
 │       │   ├── user.controller.js
-│       │   ├── organization.controller.js
 │       │   ├── gig.controller.js
 │       │   ├── calendar.controller.js
+│       │   ├── kanban.controller.js
+│       │   ├── contact.controller.js
+│       │   ├── payment.controller.js
+│       │   ├── invoice.controller.js
 │       │   └── admin.controller.js
 │       └── routes/
-│           └── index.js             # API v1 router (/api/v1/*)
+│           └── index.js                     # REST API v1 router (/api/v1/*)
 │
-└── Frontend/                        # Angular (TypeScript)
+└── Frontend/                                # [V] VIEW LAYER (Angular + TypeScript)
     ├── package.json
     ├── angular.json
     ├── tsconfig.json
@@ -370,82 +455,101 @@ ShiftSynth/
             │   └── services/
             │       └── auth.service.ts
             ├── shared/
-            │   ├── dtos/                    # TypeScript DTO interfaces matching Backend DTOs
+            │   ├── dtos/                    # TypeScript DTO interfaces mirroring Backend DTOs
+            │   │   ├── auth.dto.ts
             │   │   ├── user.dto.ts
-            │   │   ├── organization.dto.ts
             │   │   ├── gig.dto.ts
-            │   │   └── calendar-event.dto.ts
+            │   │   ├── calendar-event.dto.ts
+            │   │   ├── kanban.dto.ts
+            │   │   ├── contact.dto.ts
+            │   │   ├── payment.dto.ts
+            │   │   └── invoice.dto.ts
             │   └── components/
             │       └── navbar/
             └── features/
-                ├── auth/                    # Login / Register views
-                ├── dashboard/               # Freelancer overview
-                ├── gigs/                    # Browse, Create, Accept, Review gigs
-                ├── organizations/           # Create/Join collective, shared org gig queue
-                ├── calendar/                # Auto-populated Calendar + Conflict alerts
+                ├── auth/                    # Login, Register, Email Confirmation, Forgot/Change Password
+                ├── dashboard/               # Freelancer overview (upcoming deadlines, recent payments)
+                ├── gigs/                    # Gig creation, acceptance & gig workspace shell
+                ├── calendar/                # Unified Deadline Calendar (displays all accepted gigs)
+                ├── kanban/                  # Per-Gig Kanban Board (`@angular/cdk/drag-drop` task columns)
+                ├── contacts/                # Client Contacts Directory & Client Communication page
+                ├── payments/                # Payment Transaction form, banking log & Email Invoice status
                 └── admin/                   # System Administrator / Developer panel
 ```
 
 ---
 
-## 6. Phased MVC Implementation Roadmap
+## 6. Phased MVC Implementation Roadmap (Mandatory Priorities First)
 
-### Phase 1: Foundation, Model Database Setup & Controller Scaffolding
-1. **Model Layer — PostgreSQL & Prisma Initialization**:
-   - Set up `docker-compose.yml` for a local PostgreSQL instance.
-   - Initialize Prisma in `Backend/` (`npx prisma init`), translate the Section 4 ER diagram into `schema.prisma`, and generate the initial SQL migration (`npx prisma migrate dev --name init_shiftsynth`).
-2. **Controller Layer — Express Server & DTO/DAO Base Architecture**:
-   - Configure Express with `helmet`, `cors`, JSON body limits, and centralized error handling.
-   - Implement base Inbound/Outbound DTO validation middleware and DAO base helpers.
+### Phase 1: Foundation, Database Model & SMTP Infrastructure
+1. **Model Layer — PostgreSQL & Prisma Setup**:
+   - Configure `docker-compose.yml` with PostgreSQL and a local SMTP test server (e.g., Mailpit / Mailtrap) for testing transactional emails.
+   - Initialize Prisma in `Backend/`, implement the 10-table relational model from Section 4, and run `npx prisma migrate dev --name init_shiftsynth`.
+2. **Controller & Email Infrastructure**:
+   - Set up Express with security middleware (`helmet`, `cors`), Inbound/Outbound DTO base helpers, and `mailer.util.js` (Nodemailer).
 3. **View Layer — Angular Workspace Setup**:
-   - Initialize Angular project inside `Frontend/` with strict TypeScript mode, routing, and shared DTO interfaces (`Frontend/src/app/shared/dtos/`).
+   - Initialize Angular inside `Frontend/` with routing, Angular Material / TailwindCSS, `@angular/cdk/drag-drop`, calendar libraries, and shared TypeScript DTO contracts.
 
-### Phase 2: Authentication & Site-Level Role Management (`USER` vs `ADMIN`)
+### Phase 2: Identity & Full Authentication Semantics (Mandatory)
 1. **Model & Controller Auth Pipeline**:
-   - Build `UserDAO` (Model), `RegisterRequestDTO` / `LoginRequestDTO`, `UserResponseDTO` (stripping `passwordHash`), and `AuthController` (Controller).
-   - Implement JWT issuance (Access + Refresh tokens) and `requireSiteRole('ADMIN')` middleware.
-   - Create seed script to provision the initial System Administrator (`ADMIN`) account.
-2. **View Auth & Guards**:
-   - Build Login/Register views, JWT HTTP Interceptor, `authGuard`, and `adminGuard`.
+   - Implement `UserDAO` and `AuthTokenDAO`.
+   - Build **Registration** (`POST /api/v1/auth/register`) $\rightarrow$ hashes password, creates unverified user, generates `VERIFY_EMAIL` token, and dispatches **Email Confirmation** link.
+   - Build **Email Confirmation** (`POST /api/v1/auth/verify-email`) $\rightarrow$ validates token and marks `is_email_verified = true`.
+   - Build **Login** (`POST /api/v1/auth/login`) $\rightarrow$ issues JWT Access & Refresh tokens and enforces site-level roles (`USER` vs `ADMIN`).
+   - Build **Password Change** (`PATCH /api/v1/auth/change-password` for logged-in users) and **Forgot / Reset Password** (`POST /api/v1/auth/forgot-password` & `POST /api/v1/auth/reset-password` via emailed reset token).
+2. **View Auth Pages**:
+   - Build Register, Check-Your-Email / Verify Email callback page, Login, Forgot Password, Reset Password, and Account Security (Change Password) views.
 
-### Phase 3: Flat Freelancer Organizations (Collectives)
-1. **Model & Controller Organization Module**:
-   - Build `OrganizationDAO`, `OrganizationService` (Model), and `OrganizationController` (Controller).
-   - Implement endpoints to create an organization, join/invite peers, and list organization services/gigs.
-   - Enforce the flat collective rule in the Model: verify via `OrganizationDAO.isUserMember(orgId, userId)` that **any member** of the organization can accept or review gigs associated with the organization.
-2. **View Organization Hub**:
-   - Build Organization Directory, "Create Collective" view, and shared Organization Workspace where all members see active gigs, reviews, and collective schedules.
+### Phase 3: Client Contacts & Communication Hub (Mandatory #1)
+1. **Model & Controller Contacts Module**:
+   - Build `ClientContactDAO`, `ContactMessageDAO`, `ContactService`, and `ContactController` with strict Inbound/Outbound DTOs.
+   - Allow freelancers to create, update, search, and manage client profiles (`client_contacts`).
+   - Implement direct client communication (`POST /api/v1/contacts/:contactId/messages`): logs the message in `contact_messages` and dispatches an email directly to the client via `mailer.util.js`.
+2. **View Contacts Page**:
+   - Build `features/contacts/` featuring a searchable Client Contacts list, client detail drawer, linked gigs history, and an integrated "Message / Email Client" communication thread.
 
-### Phase 4: Gig Marketplace, Acceptance & Reviews
-1. **Model & Controller Gig Module**:
-   - Build `GigDAO`, `GigService` (Model), and `GigController` (Controller) with `CreateGigRequestDTO`, `AcceptGigRequestDTO`, `ReviewGigRequestDTO`, and `GigResponseDTO`.
-   - Support creating gigs with start/end timestamps, compensation, and optional organization association.
-   - Enable any freelancer or organization member to review gigs and submit ratings/feedback.
-2. **View Gig Board**:
-   - Build filterable Gig Marketplace view, Gig Creation form, Gig Detail view, and one-click "Accept Gig (Individual or Organization)" action.
+### Phase 4: Gigs, Unified Deadline Calendar & Per-Gig Kanban Boards (Mandatory #2)
+1. **Model & Controller — Gigs, Unified Calendar & Per-Gig Kanban**:
+   - Build `GigDAO`, `CalendarEventDAO`, and `KanbanDAO`.
+   - Implement `GigService.acceptGig` inside an atomic `prisma.$transaction`:
+     1. Run **Conflict Detection** on `calendar_events` to ensure the freelancer has no overlapping gig during `[start_time, deadline_end_time]`.
+     2. Mark the gig as `ACCEPTED`.
+     3. Insert the gig's schedule/deadline block into `calendar_events` so it appears on the **Unified Deadline Calendar**.
+     4. Automatically create a dedicated `kanban_boards` record (`1 : 1` with `gig_id`) so that specific gig has its own isolated Kanban board.
+   - Build `KanbanController` & `KanbanService` for creating, editing, reordering, and dragging tasks across columns (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`) within a gig's board.
+2. **View — Unified Calendar & Per-Gig Kanban Workspace**:
+   - Build `features/calendar/` displaying **all accepted gigs and deadlines unified on one master calendar** with conflict alerts.
+   - Build `features/kanban/` (`/gigs/:gigId/kanban`) using `@angular/cdk/drag-drop` so clicking any gig opens **that gig's dedicated Kanban board** for task division.
 
-### Phase 5: Automated Calendar Engine & Conflict Detection
-1. **Model & Controller Transactional Calendar Engine**:
-   - Build `CalendarEventDAO` with `findOverlappingEvents(userId, startTime, endTime)`.
-   - Wire `GigService.acceptGig` into an atomic Model transaction:
-     - Check if the accepting freelancer (or assigned organization members) has any conflicting event during `[gig.startTime, gig.endTime]`.
-     - If free, mark `Gig` as `ACCEPTED` and automatically insert `CalendarEvent` (`eventType: GIG_BOOKING`).
-     - If overlapping, abort the transaction and return a structured `409 Conflict` DTO via the Controller detailing the conflicting time slot.
-   - Allow users to add manual personal busy blocks (`PERSONAL_BLOCK`) so gigs cannot be accidentally accepted during personal time off.
-2. **View Interactive Calendar**:
-   - Integrate `angular-calendar` / FullCalendar in `features/calendar/`.
-   - Render auto-populated `GIG_BOOKING` blocks alongside `PERSONAL_BLOCK` entries in Month, Week, and Day views.
-   - Display real-time conflict warnings if a user tries to accept a gig that overlaps with an existing calendar block.
+### Phase 5: Payment System & Automated Email Invoicing (Mandatory #3 & #4)
+1. **Model & Controller — Payments & Email Receipts**:
+   - Build `TransactionDAO`, `EmailInvoiceDAO`, `PaymentService`, and `InvoiceService`.
+   - When a payment is submitted (`POST /api/v1/payments`):
+     1. Validate the payload via `CreatePaymentRequestDTO` and mask sensitive account numbers (`masked_iban_acct`).
+     2. Persist the banking transaction record in `transactions` (`transaction_type: 'PAYMENT'`, `bank_ref_code`, `amount`, `status: 'COMPLETED'`).
+     3. Generate an `email_invoices` record with a unique `invoice_number` and a `JSONB` banking receipt snapshot.
+     4. Automatically trigger `mailer.util.js` using `invoice-receipt.template.js` to email the banking-transaction receipt to the client (`client_contact.client_email`).
+     5. Record `delivery_status = 'SENT'` and return the sanitized `PaymentResponseDTO` and `InvoiceResponseDTO`.
+2. **View — Payments & Invoicing Dashboard**:
+   - Build `features/payments/` where freelancers can process/record gig payments, inspect banking transaction logs, view generated receipt details, and verify that the client's email invoice was sent (with a "Resend Receipt Email" action if needed).
 
-### Phase 6: System Administrator Panel, Testing & Polish
-1. **Admin / Developer MVC Module**:
-   - Build `AdminController` (protected by `requireSiteRole('ADMIN')`) and Angular `features/admin/` views to inspect users, moderate gigs/organizations, and view system metrics.
-2. **Automated Testing & Security Audit**:
-   - Unit test Model DAO conflict queries, Controller DTO sanitization (verifying sensitive fields are never exposed), and organization peer permissions.
-   - End-to-end test of the core MVC flow: *Create Gig $\rightarrow$ Accept Gig $\rightarrow$ Verify Automatic Calendar Population & Conflict Prevention*.
+### Phase 6: System Administrator Panel, Security Audit & Verification
+1. **Admin MVC Module**:
+   - Build `AdminController` (guarded by `requireRole('ADMIN')`) and Angular `features/admin/` views for platform oversight and user management.
+2. **End-to-End Verification**:
+   - Verify Auth flow (Register $\rightarrow$ Confirm Email $\rightarrow$ Login $\rightarrow$ Forgot/Change Password).
+   - Verify Gig Acceptance flow (Accept Gig $\rightarrow$ Conflict Check $\rightarrow$ Unified Calendar updates + Dedicated Per-Gig Kanban board initializes).
+   - Verify Client Contacts communication and Payment $\rightarrow$ Automated Client Email Invoice receipt delivery.
 
 ---
 
-## 7. Future / Optional Stretch Goals (TBD Based on Timeline)
-- **External Calendar Sync (Optional / TBD)**: Export calendar events as `.ics` (iCal) feeds or integrate two-way OAuth sync with Google Calendar / Outlook if project timeline permits.
-- **Real-Time Notifications**: WebSocket / Server-Sent Events (SSE) notifications when a fellow organization member accepts a new gig or when a gig review is posted.
+## 7. Planned Future Features (Deferred Scope)
+
+To keep the initial implementation focused on the mandatory core workflows above, the following capabilities are documented as **Planned Features** for subsequent releases:
+
+1. **Freelancer Organizations (Peer Collectives) — *[Planned Feature]***:
+   - Ability for groups of freelancers to band together into flat, peer-to-peer organizations (`organizations` and `organization_members` tables) to jointly offer services, review incoming gig requests, and accept gigs on behalf of the collective.
+2. **Client Refund Processing & Refund Email Receipts — *[Planned Feature]***:
+   - Extending the Payment and Email Invoicing systems (`transactions.transaction_type = 'REFUND'`) so freelancers or administrators can issue full or partial refunds and automatically email a banking refund receipt to the client.
+3. **External Calendar Sync (iCal / Google Calendar) — *[Planned Feature / TBD]***:
+   - Exporting the Unified Deadline Calendar as an `.ics` feed or syncing with external calendar providers.
